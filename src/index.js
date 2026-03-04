@@ -11,9 +11,14 @@ const { generalLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
+// ── Trust Proxy for Railway ──
+// Required because Railway sits behind a load balancer that sets X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ── Security Middleware ──
 app.use(helmet({
     contentSecurityPolicy: false, // Relaxed for SPA frontend
+    crossOriginResourcePolicy: { policy: "cross-origin" } // Ensure CSS loads over any proxy condition
 }));
 app.use(cors({
     origin: config.cors.origins,
@@ -21,6 +26,10 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// ── Serve Frontend Static Files ──
+// Placed BEFORE rate limiters so CSS/JS files are never rate-limited!
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ── Rate Limiting ──
 app.use(generalLimiter);
@@ -31,9 +40,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Request Logging ──
 app.use(morgan('combined'));
-
-// ── Serve Frontend Static Files ──
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ── Ensure upload directory exists ──
 const uploadDir = path.resolve(config.upload.dir);
