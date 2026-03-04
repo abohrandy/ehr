@@ -50,6 +50,32 @@ async function bookAppointment({ therapist_id, client_id, start_time, session_ty
         })
         .returning('*');
 
+    // Trigger Notifications Asynchronously
+    (async () => {
+        try {
+            const client = await db('clients')
+                .join('users', 'clients.user_id', 'users.id')
+                .where('clients.id', client_id)
+                .select('users.first_name', 'users.last_name', 'users.email', 'users.phone')
+                .first();
+
+            const therapist = await db('users')
+                .where('id', therapist_id)
+                .select('first_name', 'last_name', 'email')
+                .first();
+
+            if (client && therapist) {
+                const notificationService = require('./notification.service');
+                await Promise.all([
+                    notificationService.sendAppointmentConfirmation(appointment, client, therapist),
+                    notificationService.sendTherapistNotification(appointment, client, therapist)
+                ]);
+            }
+        } catch (err) {
+            console.error('[Notification Error] Failed to trigger appointment emails:', err.message);
+        }
+    })();
+
     return appointment;
 }
 

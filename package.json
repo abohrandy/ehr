@@ -12,7 +12,12 @@
     "test": "jest --forceExit --detectOpenHandles",
     "lint": "eslint src/"
   },
-  "keywords": ["ehr", "psychotherapy", "healthcare", "api"],
+  "keywords": [
+    "ehr",
+    "psychotherapy",
+    "healthcare",
+    "api"
+  ],
   "author": "Futurology Global Therapists",
   "license": "ISC",
   "type": "commonjs",
@@ -28,6 +33,7 @@
     "knex": "^3.1.0",
     "morgan": "^1.10.1",
     "multer": "^2.1.0",
+    "nodemailer": "^8.0.1",
     "pdfkit": "^0.17.2",
     "pg": "^8.19.0",
     "uuid": "^13.0.0",
