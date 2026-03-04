@@ -55,6 +55,12 @@ const Auth = (() => {
         } else {
             therapistNav.classList.remove('hidden');
             clientNav.classList.add('hidden');
+
+            // Show/hide admin-only links
+            const usersLink = document.getElementById('nav-users-link');
+            if (usersLink) {
+                usersLink.classList.toggle('hidden', user.role !== 'admin');
+            }
         }
     }
 
