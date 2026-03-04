@@ -13,13 +13,17 @@ const Modal = (() => {
         titleEl.textContent = title || '';
         bodyEl.innerHTML = typeof body === 'string' ? body : '';
         footerEl.innerHTML = typeof footer === 'string' ? footer : '';
-        if (typeof body === 'object' && body.nodeType) {
+        if (body && typeof body === 'object' && body.nodeType) {
             bodyEl.innerHTML = '';
             bodyEl.appendChild(body);
         }
         modal.classList.toggle('modal-lg', !!large);
         overlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+    }
+
+    function show(title, body, footer, options = {}) {
+        open({ title, body, footer, ...options });
     }
 
     function close() {
@@ -33,5 +37,5 @@ const Modal = (() => {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-    return { open, close };
+    return { open, show, close };
 })();
