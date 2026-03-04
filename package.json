@@ -1,0 +1,42 @@
+{
+  "name": "futurology-ehr-api",
+  "version": "1.0.0",
+  "description": "API-first psychotherapy EHR backend for Futurology Global Therapists",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "migrate": "npx knex migrate:latest --knexfile knexfile.js",
+    "migrate:rollback": "npx knex migrate:rollback --knexfile knexfile.js",
+    "seed": "npx knex seed:run --knexfile knexfile.js",
+    "test": "jest --forceExit --detectOpenHandles",
+    "lint": "eslint src/"
+  },
+  "keywords": ["ehr", "psychotherapy", "healthcare", "api"],
+  "author": "Futurology Global Therapists",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.1.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.0",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.19.0",
+    "uuid": "^13.0.0",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.0.2",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  }
+}
