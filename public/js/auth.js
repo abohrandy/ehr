@@ -58,9 +58,9 @@ const Auth = (() => {
 
             // Show/hide admin-only links
             const usersLink = document.getElementById('nav-users-link');
-            if (usersLink) {
-                usersLink.classList.toggle('hidden', user.role !== 'admin');
-            }
+            const settingsLink = document.getElementById('nav-settings-link');
+            if (usersLink) usersLink.classList.toggle('hidden', user.role !== 'admin');
+            if (settingsLink) settingsLink.classList.toggle('hidden', user.role !== 'admin');
         }
     }
 

@@ -8,5 +8,6 @@ router.use('/session-notes', require('./sessionNotes.routes'));
 router.use('/treatment-plans', require('./treatmentPlans.routes'));
 router.use('/messages', require('./messages.routes'));
 router.use('/billing', require('./billing.routes'));
+router.use('/settings', require('./settings.routes'));
 
 module.exports = router;

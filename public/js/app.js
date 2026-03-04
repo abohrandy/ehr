@@ -11,6 +11,7 @@ const App = (() => {
         '/billing': { page: BillingPage, title: 'Billing', subtitle: 'Invoices and revenue' },
         '/users': { page: UsersPage, title: 'Staff & Users', subtitle: 'Manage platform access' },
         '/profile': { page: ProfilePage, title: 'My Profile', subtitle: 'Manage your personal settings' },
+        '/settings': { page: SettingsPage, title: 'Application Settings', subtitle: 'Global practice configurations' },
         '/portal': { page: PortalPage, title: 'My Portal', subtitle: 'Your therapy dashboard' },
         '/portal/appointments': { page: PortalPage, title: 'My Appointments', subtitle: 'View your sessions' },
         '/portal/messages': { page: PortalPage, title: 'Messages', subtitle: 'Secure communication' },
