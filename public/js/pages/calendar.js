@@ -2,50 +2,50 @@
  * Calendar Page — Month view with appointment slots
  */
 const CalendarPage = (() => {
-    let currentDate = new Date();
-    let viewMode = 'month'; // month, week, day
+  let currentDate = new Date();
+  let viewMode = 'month'; // month, week, day
 
-    async function render() {
-        const content = document.getElementById('content-area');
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  async function render() {
+    const content = document.getElementById('content-area');
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-        // Fetch appointments for this month
-        const startDate = new Date(year, month, 1).toISOString();
-        const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-        const res = await API.get('/appointments/calendar', { start_date: startDate, end_date: endDate });
-        const appointments = res.data || [];
+    // Fetch appointments for this month
+    const startDate = new Date(year, month, 1).toISOString();
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+    const res = await API.get('/appointments/calendar', { start_date: startDate, end_date: endDate });
+    const appointments = res.data || [];
 
-        if (viewMode === 'month') {
-            renderMonthView(content, year, month, monthName, appointments);
-        } else {
-            renderDayView(content, appointments);
-        }
+    if (viewMode === 'month') {
+      renderMonthView(content, year, month, monthName, appointments);
+    } else {
+      renderDayView(content, appointments);
+    }
+  }
+
+  function renderMonthView(content, year, month, monthName, appointments) {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Build calendar grid
+    let cells = '';
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cells += `<div class="calendar-day other-month"><div class="day-number">${prevMonthDays - i}</div></div>`;
     }
 
-    function renderMonthView(content, year, month, monthName, appointments) {
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday = dateStr === todayStr;
+      const dayAppts = appointments.filter(a => a.start_time && a.start_time.startsWith(dateStr));
 
-        // Build calendar grid
-        let cells = '';
-        const prevMonthDays = new Date(year, month, 0).getDate();
-
-        // Previous month days
-        for (let i = firstDay - 1; i >= 0; i--) {
-            cells += `<div class="calendar-day other-month"><div class="day-number">${prevMonthDays - i}</div></div>`;
-        }
-
-        // Current month days
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const isToday = dateStr === todayStr;
-            const dayAppts = appointments.filter(a => a.start_time && a.start_time.startsWith(dateStr));
-
-            cells += `
+      cells += `
         <div class="calendar-day ${isToday ? 'today' : ''}" onclick="CalendarPage.viewDay('${dateStr}')">
           <div class="day-number">${day}</div>
           ${dayAppts.slice(0, 3).map(a => `
@@ -54,16 +54,16 @@ const CalendarPage = (() => {
           ${dayAppts.length > 3 ? `<div class="text-xs text-muted">+${dayAppts.length - 3} more</div>` : ''}
         </div>
       `;
-        }
+    }
 
-        // Fill remaining cells
-        const totalCells = firstDay + daysInMonth;
-        const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-        for (let i = 1; i <= remaining; i++) {
-            cells += `<div class="calendar-day other-month"><div class="day-number">${i}</div></div>`;
-        }
+    // Fill remaining cells
+    const totalCells = firstDay + daysInMonth;
+    const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let i = 1; i <= remaining; i++) {
+      cells += `<div class="calendar-day other-month"><div class="day-number">${i}</div></div>`;
+    }
 
-        content.innerHTML = `
+    content.innerHTML = `
       <div class="fade-in-up">
         <div class="calendar-header">
           <div class="calendar-nav">
@@ -99,31 +99,31 @@ const CalendarPage = (() => {
         </div>
       </div>
     `;
-    }
+  }
 
-    function renderDayView(content, appointments) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const dayAppts = appointments.filter(a => a.start_time && a.start_time.startsWith(dateStr));
-        const displayDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  function renderDayView(content, appointments) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dayAppts = appointments.filter(a => a.start_time && a.start_time.startsWith(dateStr));
+    const displayDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
-        let slots = '';
-        for (let h = 9; h < 17; h++) {
-            const timeLabel = `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
-            const hourStr = String(h).padStart(2, '0');
-            const appt = dayAppts.find(a => {
-                const aHour = new Date(a.start_time).getHours();
-                return aHour === h;
-            });
+    let slots = '';
+    for (let h = 9; h < 17; h++) {
+      const timeLabel = `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+      const hourStr = String(h).padStart(2, '0');
+      const appt = dayAppts.find(a => {
+        const aHour = new Date(a.start_time).getHours();
+        return aHour === h;
+      });
 
-            const isBuffer = dayAppts.some(a => {
-                const aStart = new Date(a.start_time);
-                const bufferStart = new Date(aStart.getTime() + 45 * 60000);
-                const bufferEnd = new Date(aStart.getTime() + 60 * 60000);
-                const slotTime = new Date(`${dateStr}T${hourStr}:00:00`);
-                return slotTime >= bufferStart && slotTime < bufferEnd;
-            });
+      const isBuffer = dayAppts.some(a => {
+        const aStart = new Date(a.start_time);
+        const bufferStart = new Date(aStart.getTime() + 45 * 60000);
+        const bufferEnd = new Date(aStart.getTime() + 60 * 60000);
+        const slotTime = new Date(`${dateStr}T${hourStr}:00:00`);
+        return slotTime >= bufferStart && slotTime < bufferEnd;
+      });
 
-            slots += `
+      slots += `
         <div class="time-slot ${appt ? 'occupied' : ''} ${isBuffer ? 'buffer' : ''}">
           <div class="time-label">${timeLabel}</div>
           <div class="time-content">
@@ -132,9 +132,9 @@ const CalendarPage = (() => {
           </div>
         </div>
       `;
-        }
+    }
 
-        content.innerHTML = `
+    content.innerHTML = `
       <div class="fade-in-up">
         <div class="calendar-header">
           <div class="calendar-nav">
@@ -161,23 +161,52 @@ const CalendarPage = (() => {
         <div class="day-view">${slots}</div>
       </div>
     `;
-    }
+  }
 
-    function prevMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1); render(); }
-    function nextMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1); render(); }
-    function prevDay() { currentDate.setDate(currentDate.getDate() - 1); render(); }
-    function nextDay() { currentDate.setDate(currentDate.getDate() + 1); render(); }
-    function goToday() { currentDate = new Date(); render(); }
-    function setView(mode) { viewMode = mode; render(); }
-    function viewDay(dateStr) { currentDate = new Date(dateStr + 'T12:00:00'); viewMode = 'day'; render(); }
+  function prevMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1); render(); }
+  function nextMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1); render(); }
+  function prevDay() { currentDate.setDate(currentDate.getDate() - 1); render(); }
+  function nextDay() { currentDate.setDate(currentDate.getDate() + 1); render(); }
+  function goToday() { currentDate = new Date(); render(); }
+  function setView(mode) { viewMode = mode; render(); }
+  function viewDay(dateStr) { currentDate = new Date(dateStr + 'T12:00:00'); viewMode = 'day'; render(); }
 
-    function showBookModal() {
-        Modal.open({
-            title: 'Book Appointment',
-            body: `
+  async function showBookModal() {
+    // Show loading state in modal first
+    Modal.open({
+      title: 'Book Appointment',
+      body: `<div class="loading-spinner"><div class="spinner"></div></div>`,
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>'
+    });
+
+    // Fetch clients and staff
+    const [clientsRes, usersRes] = await Promise.all([
+      API.get('/clients'),
+      API.get('/users')
+    ]);
+
+    const clients = clientsRes.data || [];
+    const staff = (usersRes.data || []).filter(u => u.role === 'therapist' || u.role === 'admin');
+    const currentUser = Auth.getUser();
+
+    Modal.open({
+      title: 'Book Appointment',
+      body: `
         <form id="book-form">
-          <div class="form-group"><label>Client ID *</label><input class="form-control" name="client_id" required></div>
-          <div class="form-group"><label>Therapist ID *</label><input class="form-control" name="therapist_id" required value="${Auth.getUser()?.id || ''}"></div>
+          <div class="form-group">
+            <label>Client *</label>
+            <select class="form-control" name="client_id" required>
+              <option value="">Select a client...</option>
+              ${clients.map(c => `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Therapist *</label>
+            <select class="form-control" name="therapist_id" required>
+              <option value="">Select a therapist...</option>
+              ${staff.map(u => `<option value="${u.id}" ${u.id === currentUser?.id ? 'selected' : ''}>${u.first_name} ${u.last_name}</option>`).join('')}
+            </select>
+          </div>
           <div class="form-row">
             <div class="form-group"><label>Date *</label><input class="form-control" type="date" name="date" required value="${currentDate.toISOString().split('T')[0]}"></div>
             <div class="form-group"><label>Time *</label><input class="form-control" type="time" name="time" required value="09:00"></div>
@@ -196,34 +225,34 @@ const CalendarPage = (() => {
           <p class="text-sm" style="color:var(--info)"><strong>ℹ️ Session = 45 min + 15 min buffer.</strong> The system blocks 60 minutes total and prevents overlapping bookings.</p>
         </div>
       `,
-            footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="CalendarPage.submitBooking()">Book Session</button>',
-        });
-    }
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="CalendarPage.submitBooking()">Book Session</button>',
+    });
+  }
 
-    async function submitBooking() {
-        const form = document.getElementById('book-form');
-        const fd = Object.fromEntries(new FormData(form));
-        if (!fd.client_id || !fd.therapist_id || !fd.date || !fd.time) {
-            Toast.error('Please fill in all required fields.');
-            return;
-        }
-        const startTime = new Date(`${fd.date}T${fd.time}:00`).toISOString();
-        const res = await API.post('/appointments', {
-            client_id: fd.client_id,
-            therapist_id: fd.therapist_id,
-            start_time: startTime,
-            session_type: fd.session_type,
-            location: fd.location,
-            notes: fd.notes,
-        });
-        if (res.success) {
-            Toast.success('Appointment booked!');
-            Modal.close();
-            render();
-        } else {
-            Toast.error(res.error || 'Booking failed.');
-        }
+  async function submitBooking() {
+    const form = document.getElementById('book-form');
+    const fd = Object.fromEntries(new FormData(form));
+    if (!fd.client_id || !fd.therapist_id || !fd.date || !fd.time) {
+      Toast.error('Please fill in all required fields.');
+      return;
     }
+    const startTime = new Date(`${fd.date}T${fd.time}:00`).toISOString();
+    const res = await API.post('/appointments', {
+      client_id: fd.client_id,
+      therapist_id: fd.therapist_id,
+      start_time: startTime,
+      session_type: fd.session_type,
+      location: fd.location,
+      notes: fd.notes,
+    });
+    if (res.success) {
+      Toast.success('Appointment booked!');
+      Modal.close();
+      render();
+    } else {
+      Toast.error(res.error || 'Booking failed.');
+    }
+  }
 
-    return { render, prevMonth, nextMonth, prevDay, nextDay, goToday, setView, viewDay, showBookModal, submitBooking };
+  return { render, prevMonth, nextMonth, prevDay, nextDay, goToday, setView, viewDay, showBookModal, submitBooking };
 })();
