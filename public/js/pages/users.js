@@ -1,7 +1,7 @@
 /**
  * Users Management Page (Admin Only)
  */
-const UsersPage = (() => {
+window.UsersPage = (() => {
     let users = [];
 
     async function init() {
@@ -9,7 +9,7 @@ const UsersPage = (() => {
         const topbarActions = document.getElementById('topbar-actions');
         topbarActions.innerHTML = `
             <button class="btn btn-primary" id="new-user-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 New User
             </button>
         `;
@@ -57,6 +57,8 @@ const UsersPage = (() => {
 
     function renderTable() {
         const tbody = document.querySelector('#users-table tbody');
+        if (!tbody) return;
+
         if (users.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:40px;">No users found.</td></tr>`;
             return;
@@ -74,90 +76,24 @@ const UsersPage = (() => {
                 </td>
                 <td style="text-align: right;">
                     <button class="btn-icon" title="Edit User" onclick="UsersPage.editUser('${u.id}')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     ${u.is_active ? `
                     <button class="btn-icon" style="color:var(--danger);" title="Deactivate" onclick="UsersPage.deactivateUser('${u.id}')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     </button>` : ''}
                 </td>
             </tr>
         `).join('');
     }
 
-    function openNewUserModal() {
-        Modal.show('Create New User', `
-            <form id="create-user-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>First Name</label>
-                        <input type="text" id="cu-fname" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Last Name</label>
-                        <input type="text" id="cu-lname" class="form-control" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="cu-email" class="form-control" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Role</label>
-                        <select id="cu-role" class="form-control" required>
-                            <option value="therapist">Therapist</option>
-                            <option value="admin">Administrator</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Phone (Optional)</label>
-                        <input type="text" id="cu-phone" class="form-control">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Temporary Password</label>
-                    <input type="password" id="cu-pass" class="form-control" required placeholder="Min 8 characters">
-                </div>
-            </form>
-        `, [
-            `<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>`,
-            `<button class="btn btn-primary" id="cu-submit-btn">Create User</button>`
-        ]);
-
-        document.getElementById('cu-submit-btn').addEventListener('click', async (e) => {
-            const btn = e.target;
-            const form = document.getElementById('create-user-form');
-            if (!form.reportValidity()) return;
-
-            btn.disabled = true;
-            btn.textContent = 'Creating...';
-
-            const payload = {
-                first_name: document.getElementById('cu-fname').value,
-                last_name: document.getElementById('cu-lname').value,
-                email: document.getElementById('cu-email').value,
-                role: document.getElementById('cu-role').value,
-                phone: document.getElementById('cu-phone').value,
-                password: document.getElementById('cu-pass').value,
-            };
-
-            const res = await API.post('/users', payload);
-            if (res.success) {
-                Toast.show('User created successfully.', 'success');
-                Modal.close();
-                fetchData();
-            } else {
-                Toast.show(res.error || 'Failed to create user.', 'error');
-            }
-            btn.disabled = false;
-            btn.textContent = 'Create User';
-        });
-    }
-
     async function editUser(id) {
         const user = users.find(u => u.id === id);
-        if (!user) return;
+        if (!user) {
+            Toast.show('User data not found localy. Refreshing...', 'info');
+            await fetchData();
+            return;
+        }
 
         Modal.show('Edit User', `
             <form id="edit-user-form">
@@ -230,6 +166,75 @@ const UsersPage = (() => {
         }
     }
 
-    // Expose methods to global scope so inline onclick handlers in table work
+    function openNewUserModal() {
+        Modal.show('Create New User', `
+            <form id="create-user-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="cu-fname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" id="cu-lname" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="cu-email" class="form-control" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="cu-role" class="form-control" required>
+                            <option value="therapist">Therapist</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone (Optional)</label>
+                        <input type="text" id="cu-phone" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Temporary Password</label>
+                    <input type="password" id="cu-pass" class="form-control" required placeholder="Min 8 characters">
+                </div>
+            </form>
+        `, [
+            `<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>`,
+            `<button class="btn btn-primary" id="cu-submit-btn">Create User</button>`
+        ]);
+
+        document.getElementById('cu-submit-btn').addEventListener('click', async (e) => {
+            const btn = e.target;
+            const form = document.getElementById('create-user-form');
+            if (!form.reportValidity()) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            const payload = {
+                first_name: document.getElementById('cu-fname').value,
+                last_name: document.getElementById('cu-lname').value,
+                email: document.getElementById('cu-email').value,
+                role: document.getElementById('cu-role').value,
+                phone: document.getElementById('cu-phone').value,
+                password: document.getElementById('cu-pass').value,
+            };
+
+            const res = await API.post('/users', payload);
+            if (res.success) {
+                Toast.show('User created successfully.', 'success');
+                Modal.close();
+                fetchData();
+            } else {
+                Toast.show(res.error || 'Failed to create user.', 'error');
+            }
+            btn.disabled = false;
+            btn.textContent = 'Create User';
+        });
+    }
+
     return { render: init, editUser, deactivateUser };
 })();
