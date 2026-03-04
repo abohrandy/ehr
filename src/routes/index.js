@@ -9,5 +9,6 @@ router.use('/treatment-plans', require('./treatmentPlans.routes'));
 router.use('/messages', require('./messages.routes'));
 router.use('/billing', require('./billing.routes'));
 router.use('/settings', require('./settings.routes'));
+router.use('/availability', require('./availability.routes'));
 
 module.exports = router;

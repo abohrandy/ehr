@@ -179,7 +179,6 @@ const CalendarPage = (() => {
       footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>'
     });
 
-    // Fetch clients and staff
     const [clientsRes, usersRes] = await Promise.all([
       API.get('/clients'),
       API.get('/users')
@@ -202,14 +201,19 @@ const CalendarPage = (() => {
           </div>
           <div class="form-group">
             <label>Therapist *</label>
-            <select class="form-control" name="therapist_id" required>
+            <select class="form-control" name="therapist_id" id="book-therapist" required>
               <option value="">Select a therapist...</option>
               ${staff.map(u => `<option value="${u.id}" ${u.id === currentUser?.id ? 'selected' : ''}>${u.first_name} ${u.last_name}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
-            <div class="form-group"><label>Date *</label><input class="form-control" type="date" name="date" required value="${currentDate.toISOString().split('T')[0]}"></div>
-            <div class="form-group"><label>Time *</label><input class="form-control" type="time" name="time" required value="09:00"></div>
+            <div class="form-group"><label>Date *</label><input class="form-control" type="date" name="date" id="book-date" required value="${currentDate.toISOString().split('T')[0]}"></div>
+            <div class="form-group">
+                <label>Time Slot *</label>
+                <select class="form-control" name="start_time" id="book-slots" required disabled>
+                    <option value="">Select therapist and date...</option>
+                </select>
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group"><label>Session Type</label>
@@ -221,37 +225,78 @@ const CalendarPage = (() => {
           </div>
           <div class="form-group"><label>Notes</label><textarea class="form-control" name="notes" rows="2"></textarea></div>
         </form>
-        <div style="background:var(--info-bg);padding:12px;border-radius:8px;margin-top:8px">
-          <p class="text-sm" style="color:var(--info)"><strong>ℹ️ Session = 45 min + 15 min buffer.</strong> The system blocks 60 minutes total and prevents overlapping bookings.</p>
+        <div id="booking-info" style="background:var(--info-bg);padding:12px;border-radius:8px;margin-top:8px">
+          <p class="text-sm" style="color:var(--info)"><strong>ℹ️ Select a date and therapist</strong> to see available 45-minute slots.</p>
         </div>
       `,
-      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="CalendarPage.submitBooking()">Book Session</button>',
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" id="book-submit-btn" disabled>Book Session</button>',
     });
+
+    // Slot update logic
+    const updateSlots = async () => {
+      const therapistId = document.getElementById('book-therapist').value;
+      const date = document.getElementById('book-date').value;
+      const slotSelect = document.getElementById('book-slots');
+      const submitBtn = document.getElementById('book-submit-btn');
+      const infoBox = document.getElementById('booking-info');
+
+      if (!therapistId || !date) {
+        slotSelect.innerHTML = '<option value="">Select therapist and date...</option>';
+        slotSelect.disabled = true;
+        submitBtn.disabled = true;
+        infoBox.innerHTML = `<p class="text-sm" style="color:var(--info)"><strong>ℹ️ Select a date and therapist</strong> to see available 45-minute slots.</p>`;
+        return;
+      }
+
+      slotSelect.disabled = true;
+      slotSelect.innerHTML = '<option>Loading slots...</option>';
+      submitBtn.disabled = true;
+      infoBox.innerHTML = `<div class="loading-spinner small"><div class="spinner"></div></div>`;
+
+
+      const res = await API.get('/availability/slots', { therapist_id: therapistId, date });
+      if (res.success && res.data.length > 0) {
+        slotSelect.innerHTML = res.data.map(s => `<option value="${s.start_time}">${s.display_time}</option>`).join('');
+        slotSelect.disabled = false;
+        submitBtn.disabled = false;
+        infoBox.innerHTML = `<p class="text-sm" style="color:var(--success)"><strong>✅ ${res.data.length} slots available.</strong> Each session is 45m + 15m buffer.</p>`;
+      } else {
+        slotSelect.innerHTML = '<option value="">No slots available</option>';
+        infoBox.innerHTML = `<p class="text-sm" style="color:var(--danger)"><strong>⚠️ ${res.message || 'No available slots for this day.'}</strong></p>`;
+      }
+    };
+
+    document.getElementById('book-therapist').addEventListener('change', updateSlots);
+    document.getElementById('book-date').addEventListener('change', updateSlots);
+    document.getElementById('book-submit-btn').addEventListener('click', () => CalendarPage.submitBooking());
+
+    // Trigger initial load
+    updateSlots();
   }
 
   async function submitBooking() {
     const form = document.getElementById('book-form');
     const fd = Object.fromEntries(new FormData(form));
-    if (!fd.client_id || !fd.therapist_id || !fd.date || !fd.time) {
-      Toast.error('Please fill in all required fields.');
+    const btn = document.getElementById('book-submit-btn');
+
+    if (!fd.client_id || !fd.therapist_id || !fd.start_time) {
+      Toast.error('Please select a valid client, therapist, and time slot.');
       return;
     }
-    const startTime = new Date(`${fd.date}T${fd.time}:00`).toISOString();
-    const res = await API.post('/appointments', {
-      client_id: fd.client_id,
-      therapist_id: fd.therapist_id,
-      start_time: startTime,
-      session_type: fd.session_type,
-      location: fd.location,
-      notes: fd.notes,
-    });
+
+    btn.disabled = true;
+    btn.textContent = 'Booking...';
+
+    const res = await API.post('/appointments', fd);
     if (res.success) {
-      Toast.success('Appointment booked!');
+      Toast.success('Appointment booked successfully!');
       Modal.close();
       render();
     } else {
       Toast.error(res.error || 'Booking failed.');
     }
+    btn.disabled = false;
+    btn.textContent = 'Book Session';
   }
 
   return { render, prevMonth, nextMonth, prevDay, nextDay, goToday, setView, viewDay, showBookModal, submitBooking };
