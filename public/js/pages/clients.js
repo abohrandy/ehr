@@ -2,14 +2,14 @@
  * Clients Page — CRUD, family linking, profile view
  */
 const ClientsPage = (() => {
-    async function render() {
-        const content = document.getElementById('content-area');
-        content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+  async function render() {
+    const content = document.getElementById('content-area');
+    content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
 
-        const res = await API.get('/clients');
-        const clients = res.data || [];
+    const res = await API.get('/clients');
+    const clients = res.data || [];
 
-        content.innerHTML = `
+    content.innerHTML = `
       <div class="fade-in-up">
         <div class="client-filters">
           <div class="search-input">
@@ -74,33 +74,33 @@ const ClientsPage = (() => {
       </div>
     `;
 
-        // Search filter
-        document.getElementById('client-search').addEventListener('input', filterClients);
-        document.getElementById('client-filter-type').addEventListener('change', filterClients);
-        document.getElementById('client-filter-status').addEventListener('change', filterClients);
+    // Search filter
+    document.getElementById('client-search').addEventListener('input', filterClients);
+    document.getElementById('client-filter-type').addEventListener('change', filterClients);
+    document.getElementById('client-filter-status').addEventListener('change', filterClients);
 
-        // Auto-open new client modal
-        if (window.location.hash.includes('new=1')) showNewClientModal();
-    }
+    // Auto-open new client modal
+    if (window.location.hash.includes('new=1')) showNewClientModal();
+  }
 
-    function filterClients() {
-        const search = document.getElementById('client-search').value.toLowerCase();
-        const type = document.getElementById('client-filter-type').value;
-        const status = document.getElementById('client-filter-status').value;
-        const rows = document.querySelectorAll('#clients-table tbody tr');
-        rows.forEach(row => {
-            const name = row.dataset.name || '';
-            const rType = row.dataset.type || '';
-            const rStatus = row.dataset.status || '';
-            const show = name.includes(search) && (!type || rType === type) && (!status || rStatus === status);
-            row.style.display = show ? '' : 'none';
-        });
-    }
+  function filterClients() {
+    const search = document.getElementById('client-search').value.toLowerCase();
+    const type = document.getElementById('client-filter-type').value;
+    const status = document.getElementById('client-filter-status').value;
+    const rows = document.querySelectorAll('#clients-table tbody tr');
+    rows.forEach(row => {
+      const name = row.dataset.name || '';
+      const rType = row.dataset.type || '';
+      const rStatus = row.dataset.status || '';
+      const show = name.includes(search) && (!type || rType === type) && (!status || rStatus === status);
+      row.style.display = show ? '' : 'none';
+    });
+  }
 
-    function showNewClientModal() {
-        Modal.open({
-            title: 'New Client',
-            body: `
+  function showNewClientModal() {
+    Modal.open({
+      title: 'New Client',
+      body: `
         <form id="new-client-form">
           <div class="form-row">
             <div class="form-group"><label>First Name *</label><input class="form-control" name="first_name" required></div>
@@ -129,38 +129,38 @@ const ClientsPage = (() => {
           </div>
         </form>
       `,
-            footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="ClientsPage.submitNewClient()">Create Client</button>',
-        });
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="ClientsPage.submitNewClient()">Create Client</button>',
+    });
+  }
+
+  async function submitNewClient() {
+    const form = document.getElementById('new-client-form');
+    const data = Object.fromEntries(new FormData(form));
+    if (!data.first_name || !data.last_name || !data.email || !data.password) {
+      Toast.error('Please fill in all required fields.');
+      return;
     }
-
-    async function submitNewClient() {
-        const form = document.getElementById('new-client-form');
-        const data = Object.fromEntries(new FormData(form));
-        if (!data.first_name || !data.last_name || !data.email || !data.password) {
-            Toast.error('Please fill in all required fields.');
-            return;
-        }
-        const res = await API.post('/clients', data);
-        if (res.success) {
-            Toast.success('Client created successfully!');
-            Modal.close();
-            render();
-        } else {
-            Toast.error(res.error || 'Failed to create client.');
-        }
+    const res = await API.post('/clients', data);
+    if (res.success) {
+      Toast.success('Client created successfully!');
+      Modal.close();
+      render();
+    } else {
+      Toast.error(res.error || 'Failed to create client.');
     }
+  }
 
-    async function viewClient(id) {
-        const res = await API.get(`/clients/${id}`);
-        if (!res.success) { Toast.error('Client not found.'); return; }
-        const c = res.data;
-        const relRes = await API.get(`/clients/${id}/relationships`);
-        const rels = relRes.data || [];
+  async function viewClient(id) {
+    const res = await API.get(`/clients/${id}`);
+    if (!res.success) { Toast.error('Client not found.'); return; }
+    const c = res.data;
+    const relRes = await API.get(`/clients/${id}/relationships`);
+    const rels = relRes.data || [];
 
-        Modal.open({
-            title: `${c.first_name} ${c.last_name}`,
-            large: true,
-            body: `
+    Modal.open({
+      title: `${c.first_name} ${c.last_name}`,
+      large: true,
+      body: `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
           <div>
             <p class="text-sm text-muted">Email</p><p class="font-medium">${c.email || '—'}</p>
@@ -195,23 +195,36 @@ const ClientsPage = (() => {
           ${rels.map(r => `<div class="appt-item"><span class="badge badge-info">${capitalize(r.relationship_type)}</span><span class="font-medium" style="margin-left:8px">${r.related_client?.first_name || ''} ${r.related_client?.last_name || ''}</span></div>`).join('')}
         ` : ''}
       `,
-            footer: `
+      footer: `
         <button class="btn btn-secondary" onclick="Modal.close()">Close</button>
         <button class="btn btn-outline" onclick="window.location.hash='#/notes?client_id=${id}';Modal.close()">View Notes</button>
         <button class="btn btn-outline" onclick="window.location.hash='#/plans?client_id=${id}';Modal.close()">View Plans</button>
       `,
-        });
-    }
+    });
+  }
 
-    function showLinkModal(clientId) {
-        Modal.open({
-            title: 'Link Family Member',
-            body: `
+  async function showLinkModal(clientId) {
+    // Show loading state first
+    Modal.open({
+      title: 'Link Family Member',
+      body: `<div class="loading-spinner"><div class="spinner"></div></div>`,
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>'
+    });
+
+    const res = await API.get('/clients');
+    const clients = (res.data || []).filter(c => c.id !== clientId);
+
+    Modal.open({
+      title: 'Link Family Member',
+      body: `
         <form id="link-form">
           <input type="hidden" name="client_id_1" value="${clientId}">
           <div class="form-group">
-            <label>Related Client ID</label>
-            <input class="form-control" name="client_id_2" placeholder="Enter client UUID" required>
+            <label>Select Family Member *</label>
+            <select class="form-control" name="client_id_2" required>
+                <option value="">Select a client...</option>
+                ${clients.map(c => `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`).join('')}
+            </select>
           </div>
           <div class="form-group">
             <label>Relationship Type</label>
@@ -227,21 +240,22 @@ const ClientsPage = (() => {
           </div>
         </form>
       `,
-            footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="ClientsPage.submitLink()">Link</button>',
-        });
-    }
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="ClientsPage.submitLink()">Link</button>',
+    });
+  }
 
-    async function submitLink() {
-        const form = document.getElementById('link-form');
-        const data = Object.fromEntries(new FormData(form));
-        const res = await API.post('/clients/link', data);
-        if (res.success) {
-            Toast.success('Family link created!');
-            Modal.close();
-        } else {
-            Toast.error(res.error || 'Failed to create link.');
-        }
+  async function submitLink() {
+    const form = document.getElementById('link-form');
+    const fd = Object.fromEntries(new FormData(form));
+    if (!fd.client_id_2) { Toast.error('Please select a family member.'); return; }
+    const res = await API.post('/clients/link', fd);
+    if (res.success) {
+      Toast.success('Family link created!');
+      Modal.close();
+    } else {
+      Toast.error(res.error || 'Failed to create link.');
     }
+  }
 
-    return { render, showNewClientModal, submitNewClient, viewClient, showLinkModal, submitLink };
+  return { render, showNewClientModal, submitNewClient, viewClient, showLinkModal, submitLink };
 })();

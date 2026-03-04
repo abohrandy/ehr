@@ -2,19 +2,19 @@
  * Treatment Plans Page — Goal tracking, progress, status
  */
 const PlansPage = (() => {
-    async function render() {
-        const content = document.getElementById('content-area');
-        content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+  async function render() {
+    const content = document.getElementById('content-area');
+    content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
 
-        const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
-        const clientId = params.get('client_id');
-        const query = {};
-        if (clientId) query.client_id = clientId;
+    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const clientId = params.get('client_id');
+    const query = {};
+    if (clientId) query.client_id = clientId;
 
-        const res = await API.get('/treatment-plans', query);
-        const plans = res.data || [];
+    const res = await API.get('/treatment-plans', query);
+    const plans = res.data || [];
 
-        content.innerHTML = `
+    content.innerHTML = `
       <div class="fade-in-up">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
           <div class="tabs" style="margin-bottom:0;border:none">
@@ -31,22 +31,22 @@ const PlansPage = (() => {
 
         <div id="plans-list">
           ${plans.length === 0
-                ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><h3>No treatment plans</h3><p>Create a treatment plan to start tracking goals</p></div>'
-                : plans.map(p => renderPlanCard(p)).join('')
-            }
+        ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><h3>No treatment plans</h3><p>Create a treatment plan to start tracking goals</p></div>'
+        : plans.map(p => renderPlanCard(p)).join('')
+      }
         </div>
       </div>
     `;
 
-        if (params.get('new') === '1') showNewPlanModal();
-    }
+    if (params.get('new') === '1') showNewPlanModal();
+  }
 
-    function renderPlanCard(p) {
-        const goals = typeof p.goals === 'string' ? JSON.parse(p.goals) : (p.goals || []);
-        const progress = typeof p.progress_notes === 'string' ? JSON.parse(p.progress_notes) : (p.progress_notes || []);
-        const completedGoals = goals.filter(g => g.status === 'completed').length;
+  function renderPlanCard(p) {
+    const goals = typeof p.goals === 'string' ? JSON.parse(p.goals) : (p.goals || []);
+    const progress = typeof p.progress_notes === 'string' ? JSON.parse(p.progress_notes) : (p.progress_notes || []);
+    const completedGoals = goals.filter(g => g.status === 'completed').length;
 
-        return `
+    return `
       <div class="card mb" data-status="${p.status}" style="cursor:pointer" onclick="PlansPage.viewPlan('${p.id}')">
         <div class="card-header">
           <div>
@@ -83,28 +83,28 @@ const PlansPage = (() => {
         </div>
       </div>
     `;
-    }
+  }
 
-    function filterPlans(status, btn) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('#plans-list > .card').forEach(card => {
-            if (status === 'all' || card.dataset.status === status) card.style.display = '';
-            else card.style.display = 'none';
-        });
-    }
+  function filterPlans(status, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#plans-list > .card').forEach(card => {
+      if (status === 'all' || card.dataset.status === status) card.style.display = '';
+      else card.style.display = 'none';
+    });
+  }
 
-    async function viewPlan(id) {
-        const res = await API.get(`/treatment-plans/${id}`);
-        if (!res.success) { Toast.error('Plan not found.'); return; }
-        const p = res.data;
-        const goals = typeof p.goals === 'string' ? JSON.parse(p.goals) : (p.goals || []);
-        const progress = typeof p.progress_notes === 'string' ? JSON.parse(p.progress_notes) : (p.progress_notes || []);
+  async function viewPlan(id) {
+    const res = await API.get(`/treatment-plans/${id}`);
+    if (!res.success) { Toast.error('Plan not found.'); return; }
+    const p = res.data;
+    const goals = typeof p.goals === 'string' ? JSON.parse(p.goals) : (p.goals || []);
+    const progress = typeof p.progress_notes === 'string' ? JSON.parse(p.progress_notes) : (p.progress_notes || []);
 
-        Modal.open({
-            title: `Treatment Plan — ${p.client_first_name || ''} ${p.client_last_name || ''}`,
-            large: true,
-            body: `
+    Modal.open({
+      title: `Treatment Plan — ${p.client_first_name || ''} ${p.client_last_name || ''}`,
+      large: true,
+      body: `
         <div style="display:flex;gap:8px;margin-bottom:20px">
           <span class="badge badge-${p.status === 'active' ? 'success' : 'muted'}">${capitalize(p.status)}</span>
           <span class="badge badge-primary">${capitalize(p.case_type)}</span>
@@ -137,37 +137,53 @@ const PlansPage = (() => {
           <button class="btn btn-primary btn-sm" onclick="PlansPage.addProgress('${p.id}')">Add Note</button>
         </div>
       `,
-            footer: `
+      footer: `
         <button class="btn btn-secondary" onclick="Modal.close()">Close</button>
         ${p.status === 'active' ? `<button class="btn btn-danger btn-sm" onclick="PlansPage.closePlan('${p.id}')">Close Plan</button>` : ''}
       `,
-        });
-    }
+    });
+  }
 
-    async function addProgress(planId) {
-        const input = document.getElementById('progress-note-input');
-        const note = input?.value?.trim();
-        if (!note) { Toast.error('Please enter a progress note.'); return; }
-        const res = await API.patch(`/treatment-plans/${planId}/progress`, { note });
-        if (res.success) { Toast.success('Progress added!'); Modal.close(); render(); }
-        else { Toast.error(res.error || 'Failed to add progress.'); }
-    }
+  async function addProgress(planId) {
+    const input = document.getElementById('progress-note-input');
+    const note = input?.value?.trim();
+    if (!note) { Toast.error('Please enter a progress note.'); return; }
+    const res = await API.patch(`/treatment-plans/${planId}/progress`, { note });
+    if (res.success) { Toast.success('Progress added!'); Modal.close(); render(); }
+    else { Toast.error(res.error || 'Failed to add progress.'); }
+  }
 
-    async function closePlan(planId) {
-        if (!confirm('Close this treatment plan?')) return;
-        const res = await API.patch(`/treatment-plans/${planId}/close`);
-        if (res.success) { Toast.success('Plan closed.'); Modal.close(); render(); }
-        else { Toast.error(res.error || 'Failed to close.'); }
-    }
+  async function closePlan(planId) {
+    if (!confirm('Close this treatment plan?')) return;
+    const res = await API.patch(`/treatment-plans/${planId}/close`);
+    if (res.success) { Toast.success('Plan closed.'); Modal.close(); render(); }
+    else { Toast.error(res.error || 'Failed to close.'); }
+  }
 
-    function showNewPlanModal() {
-        Modal.open({
-            title: 'New Treatment Plan',
-            large: true,
-            body: `
+  async function showNewPlanModal() {
+    // Show loading state first
+    Modal.open({
+      title: 'New Treatment Plan',
+      body: `<div class="loading-spinner"><div class="spinner"></div></div>`,
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button>'
+    });
+
+    const res = await API.get('/clients');
+    const clients = res.data || [];
+
+    Modal.open({
+      title: 'New Treatment Plan',
+      large: true,
+      body: `
         <form id="new-plan-form">
           <div class="form-row">
-            <div class="form-group"><label>Client ID *</label><input class="form-control" name="client_id" required></div>
+            <div class="form-group">
+                <label>Client *</label>
+                <select class="form-control" name="client_id" required>
+                    <option value="">Select a client...</option>
+                    ${clients.map(c => `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`).join('')}
+                </select>
+            </div>
             <div class="form-group"><label>Case Type</label>
               <select class="form-control" name="case_type"><option value="individual">Individual</option><option value="couple">Couple</option><option value="family">Family</option><option value="divorce">Divorce</option><option value="child">Child</option></select>
             </div>
@@ -184,30 +200,30 @@ const PlansPage = (() => {
           <button type="button" class="btn btn-ghost btn-sm" onclick="PlansPage.addGoalField()">+ Add Goal</button>
         </form>
       `,
-            footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="PlansPage.submitPlan()">Create Plan</button>',
-        });
-    }
+      footer: '<button class="btn btn-secondary" onclick="Modal.close()">Cancel</button><button class="btn btn-primary" onclick="PlansPage.submitPlan()">Create Plan</button>',
+    });
+  }
 
-    let goalCount = 1;
-    function addGoalField() {
-        goalCount++;
-        const container = document.getElementById('goals-container');
-        const div = document.createElement('div');
-        div.className = 'form-group';
-        div.innerHTML = `<input class="form-control" name="goal_${goalCount}" placeholder="Goal ${goalCount}">`;
-        container.appendChild(div);
-    }
+  let goalCount = 1;
+  function addGoalField() {
+    goalCount++;
+    const container = document.getElementById('goals-container');
+    const div = document.createElement('div');
+    div.className = 'form-group';
+    div.innerHTML = `<input class="form-control" name="goal_${goalCount}" placeholder="Goal ${goalCount}">`;
+    container.appendChild(div);
+  }
 
-    async function submitPlan() {
-        const form = document.getElementById('new-plan-form');
-        const fd = Object.fromEntries(new FormData(form));
-        if (!fd.client_id) { Toast.error('Client ID is required.'); return; }
-        const goals = Object.entries(fd).filter(([k]) => k.startsWith('goal_')).map(([, v]) => v).filter(Boolean).map(g => ({ goal: g, objectives: [], status: 'not_started' }));
-        const data = { client_id: fd.client_id, diagnosis: fd.diagnosis, case_type: fd.case_type, start_date: fd.start_date || null, target_end_date: fd.target_end_date || null, goals };
-        const res = await API.post('/treatment-plans', data);
-        if (res.success) { Toast.success('Plan created!'); Modal.close(); goalCount = 1; render(); }
-        else { Toast.error(res.error || 'Failed to create plan.'); }
-    }
+  async function submitPlan() {
+    const form = document.getElementById('new-plan-form');
+    const fd = Object.fromEntries(new FormData(form));
+    if (!fd.client_id) { Toast.error('Please select a client.'); return; }
+    const goals = Object.entries(fd).filter(([k]) => k.startsWith('goal_')).map(([, v]) => v).filter(Boolean).map(g => ({ goal: g, objectives: [], status: 'not_started' }));
+    const data = { client_id: fd.client_id, diagnosis: fd.diagnosis, case_type: fd.case_type, start_date: fd.start_date || null, target_end_date: fd.target_end_date || null, goals };
+    const res = await API.post('/treatment-plans', data);
+    if (res.success) { Toast.success('Plan created!'); Modal.close(); goalCount = 1; render(); }
+    else { Toast.error(res.error || 'Failed to create plan.'); }
+  }
 
-    return { render, showNewPlanModal, addGoalField, submitPlan, viewPlan, addProgress, closePlan, filterPlans };
+  return { render, showNewPlanModal, addGoalField, submitPlan, viewPlan, addProgress, closePlan, filterPlans };
 })();
