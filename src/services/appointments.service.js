@@ -66,9 +66,13 @@ async function bookAppointment({ therapist_id, client_id, start_time, session_ty
 
             if (client && therapist) {
                 const notificationService = require('./notification.service');
+                const practiceEmailSetting = await db('app_settings').where('key', 'practice_email').first();
+                const adminEmail = practiceEmailSetting ? practiceEmailSetting.value : config.admin.email;
+
                 await Promise.all([
                     notificationService.sendAppointmentConfirmation(appointment, client, therapist),
-                    notificationService.sendTherapistNotification(appointment, client, therapist)
+                    notificationService.sendTherapistNotification(appointment, client, therapist),
+                    notificationService.sendAdminNotification(appointment, client, therapist, adminEmail)
                 ]);
             }
         } catch (err) {

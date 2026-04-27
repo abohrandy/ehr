@@ -106,6 +106,57 @@ Message: ${appointment.notes || 'No message provided'}`,
 }
 
 /**
+ * Send a notification email to the admin.
+ */
+async function sendAdminNotification(appointment, client, therapist, adminEmail) {
+    const date = new Date(appointment.start_time).toLocaleDateString();
+    const time = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const therapistName = `${therapist.first_name || 'Dr. Osatohanmwen'} ${therapist.last_name || 'Iredia'}`.trim();
+
+    const mailOptions = {
+        from: config.email.from,
+        to: adminEmail,
+        subject: `[Admin Alert] New Appointment Booked`,
+        text: `A new appointment has been booked.
+
+Client Details:
+Name: ${client.first_name} ${client.last_name}
+Email: ${client.email}
+Phone: ${client.phone || 'N/A'}
+
+Therapist: ${therapistName}
+
+Appointment Details:
+Service: ${appointment.session_type || 'Therapy Session'}
+Date: ${date}
+Time: ${time}
+Message: ${appointment.notes || 'No message provided'}`,
+        html: `
+            <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+                <h2>New Appointment Booked (Admin Alert)</h2>
+                <h3>Client Details</h3>
+                <ul>
+                    <li><strong>Name:</strong> ${client.first_name} ${client.last_name}</li>
+                    <li><strong>Email:</strong> ${client.email}</li>
+                    <li><strong>Phone:</strong> ${client.phone || 'N/A'}</li>
+                </ul>
+                <h3>Therapist</h3>
+                <p>${therapistName}</p>
+                <h3>Appointment Details</h3>
+                <ul>
+                    <li><strong>Service:</strong> ${appointment.session_type || 'Therapy Session'}</li>
+                    <li><strong>Date:</strong> ${date}</li>
+                    <li><strong>Time:</strong> ${time}</li>
+                    <li><strong>Message:</strong> ${appointment.notes || 'No message provided'}</li>
+                </ul>
+            </div>
+        `
+    };
+
+    return sendEmail(mailOptions);
+}
+
+/**
  * Helper to send email asynchronously.
  */
 async function sendEmail(options) {
@@ -122,5 +173,6 @@ async function sendEmail(options) {
 
 module.exports = {
     sendAppointmentConfirmation,
-    sendTherapistNotification
+    sendTherapistNotification,
+    sendAdminNotification
 };

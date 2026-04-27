@@ -2,7 +2,14 @@ const db = require('../db/knex');
 
 async function setAvailability(req, res, next) {
     try {
-        const therapist_id = req.user.id;
+        let therapist_id = req.user.id;
+        if (req.params.therapist_id && req.params.therapist_id !== req.user.id) {
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({ success: false, error: 'Unauthorized to set availability for other users.' });
+            }
+            therapist_id = req.params.therapist_id;
+        }
+
         const { availability, breaks } = req.body;
 
         await db.transaction(async trx => {

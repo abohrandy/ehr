@@ -60,9 +60,16 @@ const Auth = (() => {
             const usersLink = document.getElementById('nav-users-link');
             const settingsLink = document.getElementById('nav-settings-link');
             const availabilityLink = document.getElementById('nav-availability-link');
+            const availabilityText = document.getElementById('nav-availability-text');
+            
             if (usersLink) usersLink.classList.toggle('hidden', user.role !== 'admin');
             if (settingsLink) settingsLink.classList.toggle('hidden', user.role !== 'admin');
-            if (availabilityLink) availabilityLink.classList.toggle('hidden', user.role === 'client');
+            if (availabilityLink) {
+                availabilityLink.classList.toggle('hidden', user.role === 'client');
+                if (availabilityText) {
+                    availabilityText.textContent = user.role === 'admin' ? 'Doctor Schedules' : 'My Schedule';
+                }
+            }
         }
     }
 

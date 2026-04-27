@@ -107,5 +107,5 @@ const ProfilePage = (() => {
         });
     }
 
-    return { init };
+    return { render: init };
 })();

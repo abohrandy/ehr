@@ -3,6 +3,7 @@
  */
 window.AvailabilityPage = (() => {
     let settings = { availability: [], breaks: [] };
+    let selectedTherapistId = null;
 
     async function init() {
         const topbarActions = document.getElementById('topbar-actions');
@@ -13,8 +14,26 @@ window.AvailabilityPage = (() => {
             </button>
         `;
 
+        const user = Auth.getUser();
+        let doctorSelectorHtml = '';
+        if (user && user.role === 'admin') {
+            doctorSelectorHtml = `
+                <div class="card mb-4" style="background-color: var(--surface-2);">
+                    <div class="card-body">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Select Doctor/Therapist</label>
+                            <select id="doctor-selector" class="form-control">
+                                <option value="">Loading doctors...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         const html = `
             <div class="fade-in-up" style="max-width: 900px; margin: 0 auto;">
+                ${doctorSelectorHtml}
                 <div class="card mb-4">
                     <div class="card-header">
                         <h3 class="card-title">Weekly Working Hours</h3>
@@ -70,11 +89,43 @@ window.AvailabilityPage = (() => {
         document.getElementById('add-break-btn').addEventListener('click', () => addBreakRow());
         document.getElementById('save-availability-btn').addEventListener('click', saveSettings);
 
+        if (user && user.role === 'admin') {
+            const drSelector = document.getElementById('doctor-selector');
+            drSelector.addEventListener('change', (e) => {
+                selectedTherapistId = e.target.value;
+                fetchData();
+            });
+
+            const usersRes = await API.get('/users');
+            if (usersRes.success) {
+                const doctors = usersRes.data.filter(u => u.role === 'therapist');
+                if (doctors.length > 0) {
+                    drSelector.innerHTML = doctors.map(d => `<option value="${d.id}">Dr. ${d.first_name} ${d.last_name}</option>`).join('');
+                    selectedTherapistId = doctors[0].id;
+                } else {
+                    drSelector.innerHTML = '<option value="">No doctors found</option>';
+                }
+            }
+        }
+
         await fetchData();
     }
 
     async function fetchData() {
-        const res = await API.get('/availability');
+        const user = Auth.getUser();
+        let url = '/availability';
+        
+        if (user && user.role === 'admin') {
+            if (!selectedTherapistId) {
+                settings = { availability: [], breaks: [] };
+                renderAvailability();
+                renderBreaks();
+                return;
+            }
+            url = '/availability/' + selectedTherapistId;
+        }
+
+        const res = await API.get(url);
         if (res.success) {
             settings = res.data;
             renderAvailability();
@@ -84,6 +135,9 @@ window.AvailabilityPage = (() => {
             if (settings.availability.length > 0) {
                 document.getElementById('min-advance').value = settings.availability[0].min_advance_hours;
                 document.getElementById('max-sessions').value = settings.availability[0].max_sessions_per_day || '';
+            } else {
+                document.getElementById('min-advance').value = 4;
+                document.getElementById('max-sessions').value = '';
             }
         }
     }
@@ -167,6 +221,12 @@ window.AvailabilityPage = (() => {
     }
 
     async function saveSettings() {
+        const user = Auth.getUser();
+        if (user && user.role === 'admin' && !selectedTherapistId) {
+            Toast.show('Please select a doctor first.', 'error');
+            return;
+        }
+
         const btn = document.getElementById('save-availability-btn');
         btn.disabled = true;
         btn.textContent = 'Saving...';
@@ -191,7 +251,12 @@ window.AvailabilityPage = (() => {
             });
         });
 
-        const res = await API.put('/availability', { availability, breaks });
+        let url = '/availability';
+        if (user && user.role === 'admin') {
+            url = '/availability/' + selectedTherapistId;
+        }
+
+        const res = await API.put(url, { availability, breaks });
         if (res.success) {
             Toast.show('Schedule updated successfully.', 'success');
             await fetchData();

@@ -10,5 +10,6 @@ router.get('/slots', authenticate, availabilityController.getAvailableSlots);
 router.get('/', authenticate, availabilityController.getAvailability);
 router.get('/:therapist_id', authenticate, rbac('admin', 'therapist'), availabilityController.getAvailability);
 router.put('/', authenticate, rbac('admin', 'therapist'), availabilityController.setAvailability);
+router.put('/:therapist_id', authenticate, rbac('admin'), availabilityController.setAvailability);
 
 module.exports = router;
