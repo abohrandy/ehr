@@ -178,7 +178,7 @@ const BillingPage = (() => {
   }
 
   async function markPaid(id) {
-    const res = await API.patch(\`/billing/invoices/\${id}/pay\`);
+    const res = await API.patch(`/billing/invoices/${id}/pay`);
     if (res.success) { Toast.success('Invoice marked as paid!'); render(); }
     else { Toast.error(res.error || 'Failed to update.'); }
   }
