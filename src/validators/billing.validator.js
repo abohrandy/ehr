@@ -4,6 +4,7 @@ const createInvoiceSchema = Joi.object({
     client_id: Joi.string().uuid().required(),
     appointment_id: Joi.string().uuid().allow(null),
     amount: Joi.number().precision(2).positive().required(),
+    currency: Joi.string().valid('NGN', 'USD', 'EUR', 'GBP').default('NGN'),
     due_date: Joi.date().iso().allow(null),
     description: Joi.string().allow('', null),
 });

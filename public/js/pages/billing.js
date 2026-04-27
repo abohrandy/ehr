@@ -2,6 +2,17 @@
  * Billing Page — Invoices, payments, revenue
  */
 const BillingPage = (() => {
+  function formatCurrency(amount, currency) {
+    const symbolMap = { 'NGN': '₦', 'USD': '$', 'EUR': '€', 'GBP': '£' };
+    const sym = symbolMap[currency || 'NGN'] || '$';
+    return `${sym}${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  function formatCurrencyTotals(totalsObj) {
+    if (!totalsObj || Object.keys(totalsObj).length === 0) return formatCurrency(0, 'NGN');
+    return Object.entries(totalsObj).map(([curr, amt]) => formatCurrency(amt, curr)).join(' | ');
+  }
+
   async function render() {
     const content = document.getElementById('content-area');
     content.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
@@ -16,20 +27,30 @@ const BillingPage = (() => {
 
     const paid = invoices.filter(i => i.status === 'paid');
     const pending = invoices.filter(i => i.status === 'pending' || i.status === 'sent');
-    const totalPaid = paid.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
-    const totalPending = pending.reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+    
+    const totalPaidByCurrency = paid.reduce((acc, i) => {
+        const curr = i.currency || 'NGN';
+        acc[curr] = (acc[curr] || 0) + parseFloat(i.amount || 0);
+        return acc;
+    }, {});
+    
+    const totalPendingByCurrency = pending.reduce((acc, i) => {
+        const curr = i.currency || 'NGN';
+        acc[curr] = (acc[curr] || 0) + parseFloat(i.amount || 0);
+        return acc;
+    }, {});
 
     content.innerHTML = `
       <div class="fade-in-up">
         <div class="stat-grid">
           <div class="stat-card">
             <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-            <div class="stat-value">$${totalPaid.toLocaleString()}</div>
+            <div class="stat-value" style="font-size: 1.2rem;">${formatCurrencyTotals(totalPaidByCurrency)}</div>
             <div class="stat-label">Revenue Collected</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-            <div class="stat-value">$${totalPending.toLocaleString()}</div>
+            <div class="stat-value" style="font-size: 1.2rem;">${formatCurrencyTotals(totalPendingByCurrency)}</div>
             <div class="stat-label">Pending Payments</div>
           </div>
           <div class="stat-card">
@@ -39,7 +60,7 @@ const BillingPage = (() => {
           </div>
           <div class="stat-card">
             <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-            <div class="stat-value">$${parseFloat(revenue.total || 0).toLocaleString()}</div>
+            <div class="stat-value" style="font-size: 1.2rem;">${formatCurrencyTotals(revenue.total_revenue_by_currency)}</div>
             <div class="stat-label">This Month Revenue</div>
           </div>
         </div>
@@ -70,7 +91,7 @@ const BillingPage = (() => {
         : invoices.map(inv => `
                     <tr>
                       <td class="font-medium">${inv.client_first_name || ''} ${inv.client_last_name || ''}</td>
-                      <td class="font-semibold">$${parseFloat(inv.amount || 0).toFixed(2)}</td>
+                      <td class="font-semibold">${formatCurrency(inv.amount, inv.currency)}</td>
                       <td>
                         <span class="badge badge-${inv.status === 'paid' ? 'success' : inv.status === 'overdue' ? 'danger' : 'warning'}">
                           ${capitalize(inv.status)}
@@ -95,7 +116,6 @@ const BillingPage = (() => {
   }
 
   async function showNewInvoiceModal() {
-    // Show loading state first
     Modal.open({
       title: 'Create Invoice',
       body: `<div class="loading-spinner"><div class="spinner"></div></div>`,
@@ -117,7 +137,21 @@ const BillingPage = (() => {
                     ${clients.map(c => `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`).join('')}
                 </select>
             </div>
-            <div class="form-group"><label>Amount ($) *</label><input class="form-control" type="number" name="amount" step="0.01" required></div>
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>Currency *</label>
+                    <select class="form-control" name="currency" required>
+                        <option value="NGN" selected>NGN (₦)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                    </select>
+                </div>
+                <div style="flex: 2;">
+                    <label>Amount *</label>
+                    <input class="form-control" type="number" name="amount" step="0.01" required>
+                </div>
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group"><label>Issue Date</label><input class="form-control" type="date" name="issue_date" value="${new Date().toISOString().split('T')[0]}"></div>
@@ -144,7 +178,7 @@ const BillingPage = (() => {
   }
 
   async function markPaid(id) {
-    const res = await API.patch(`/billing/invoices/${id}/pay`);
+    const res = await API.patch(\`/billing/invoices/\${id}/pay\`);
     if (res.success) { Toast.success('Invoice marked as paid!'); render(); }
     else { Toast.error(res.error || 'Failed to update.'); }
   }

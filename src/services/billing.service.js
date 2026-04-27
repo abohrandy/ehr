@@ -101,24 +101,32 @@ async function getRevenueSummary(year, month) {
 
     const result = await query
         .select(
+            'currency',
             db.raw('EXTRACT(MONTH FROM paid_at) as month'),
             db.raw('SUM(amount) as total_revenue'),
             db.raw('COUNT(*) as invoice_count')
         )
-        .groupByRaw('EXTRACT(MONTH FROM paid_at)')
+        .groupByRaw('currency, EXTRACT(MONTH FROM paid_at)')
         .orderByRaw('EXTRACT(MONTH FROM paid_at)');
 
-    const totalYear = result.reduce((sum, r) => sum + parseFloat(r.total_revenue || 0), 0);
+    // totalYear should be grouped by currency
+    const totalYearByCurrency = result.reduce((acc, r) => {
+        const curr = r.currency || 'NGN';
+        acc[curr] = (acc[curr] || 0) + parseFloat(r.total_revenue || 0);
+        return acc;
+    }, {});
 
+    // breakdown should also be grouped appropriately, or we can just send the raw array of results
     return {
         year,
         month: month || null,
         monthly_breakdown: result.map((r) => ({
+            currency: r.currency || 'NGN',
             month: parseInt(r.month, 10),
             total_revenue: parseFloat(r.total_revenue),
             invoice_count: parseInt(r.invoice_count, 10),
         })),
-        total_revenue: totalYear,
+        total_revenue_by_currency: totalYearByCurrency,
     };
 }
 
